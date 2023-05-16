@@ -21,17 +21,19 @@ class DataProcessing:
 
     @staticmethod
     def normalization(x):
-        # object to obiekt czyli string bo string w pythonie to object
-        values = x.select_dtypes(
-            exclude="object")  # w skrocie to wyrzuca z bazy nienumeryczne dane np string, bo by sie nie dalo zrobic obliczen
+        values = x.select_dtypes(exclude="object")
         columnNames = values.columns.tolist()
         for column in columnNames:
-            data = x.loc[:,column]  # to prawdopodobnie bierze wszystkie wartosci z danej kolumny i pozniej bierze min i max wartosc z niej
-            min1 = min(data)
-            max1 = max(data)
-            for row in range(len(x)):
-                xprim = (x.at[row, column] - min1) / (max1 - min1)
-                x.at[row, column] = xprim  # tu podmiana wartsci oryginalnej na przeskalowaną
+            data = x[column]
+            non_zero_data = data[data != 0]
+            min1 = min(non_zero_data)
+            max1 = max(non_zero_data)
+            if max1 - min1 == 0:
+                continue  # Skip normalization if the range is zero
+            for row, value in data.iteritems():
+                if value != 0:
+                    xprim = (value - min1) / (max1 - min1)
+                    x.at[row, column] = xprim
 
     @staticmethod
     def split(x, percentage):
@@ -40,6 +42,21 @@ class DataProcessing:
         training = x.iloc[:split_index]
         testing = x.iloc[split_index:]
         return training, testing
+    @staticmethod
+    def remove_column(data, column_name):
+        return data.drop(column_name, axis=1)
+
+    @staticmethod
+    def remove_records_with_zeros(data, threshold=3):
+        return data[(data == 0).sum(axis=1) < threshold]
+
+
+    @staticmethod
+    def get_records_with_max_4_pregnancies(diabetes):
+        max_pregnancies = 4
+        filtered_records = diabetes[diabetes['Pregnancies'] <= max_pregnancies]
+
+        return filtered_records
 
 
 class NaiveBayes:
@@ -47,13 +64,13 @@ class NaiveBayes:
     def classify(x, sample):
         probability = []
         #dla kazdej klasy
-        classNames = x['variety'].unique().tolist()
+        classNames = x['Outcome'].unique().tolist()
         for className in classNames:
-            columnNames = x.columns.tolist()[:4] # wszystkie elementy do tego
+            columnNames = x.columns.tolist()[:8] # wszystkie elementy do tego
             prob = 1
-            tmp = x[x["variety"] == className]  # tylko elementy klasy className
+            tmp = x[x["Outcome"] == className]  # tylko elementy klasy className
             for columnName in columnNames:
-                data = tmp.loc[:, columnName] #wyciągamy wszystkie wartosci z columnName
+                data = tmp.loc[:, columnName] #wyciągamy wszystkie wartosci z columnName z konkretnej klasy
                 mu = mean(data)
                 sigma = stdev(data)
                 #prawdopodobienstwo teraz
@@ -69,8 +86,22 @@ class NaiveBayes:
 
 diabetes = pd.read_csv("diabetes.csv")
 
-# diabetes.info()
-print(diabetes.head())
+diabetes = DataProcessing.get_records_with_max_4_pregnancies(diabetes)
+diabetes = DataProcessing.remove_records_with_zeros(diabetes)
 
-# zastanow sie jak skategoryzowac kolumny od pregnacies do skinThickness i napisz funkcje kategoryzujące je
-# ( prawdopodobnie kazda kolumna to inna funkcja)
+# diabetes.info()
+# print(diabetes.head())
+
+DataProcessing.shuffle(diabetes)
+DataProcessing.normalization(diabetes)
+train, test = DataProcessing.split(diabetes, 0.7)
+tmp = NaiveBayes.classify(train, test.iloc[0])
+print(tmp)
+
+counter = 0
+for i in range(len(test)):
+    tmp = NaiveBayes.classify(train, test.iloc[i])[0]
+    if tmp == test.iloc[i]['Outcome']:
+        counter += 1
+dokladnosc = float(counter)/len(test) * 100
+print(dokladnosc, "%")
