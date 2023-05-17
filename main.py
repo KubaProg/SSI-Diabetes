@@ -43,65 +43,111 @@ class DataProcessing:
         testing = x.iloc[split_index:]
         return training, testing
     @staticmethod
-    def remove_column(data, column_name):
-        return data.drop(column_name, axis=1)
-
-    @staticmethod
-    def remove_records_with_zeros(data, threshold=3):
-        return data[(data == 0).sum(axis=1) < threshold]
-
-
-    @staticmethod
-    def get_records_with_max_4_pregnancies(diabetes):
-        max_pregnancies = 4
+    def get_records_with_max_6_pregnancies(diabetes):
+        max_pregnancies = 6
         filtered_records = diabetes[diabetes['Pregnancies'] <= max_pregnancies]
 
         return filtered_records
-
 
 class NaiveBayes:
     @staticmethod
     def classify(x, sample):
         probability = []
-        #dla kazdej klasy
         classNames = x['Outcome'].unique().tolist()
         for className in classNames:
-            columnNames = x.columns.tolist()[:8] # wszystkie elementy do tego
+            columnNames = x.columns.tolist()[:8]
             prob = 1
-            tmp = x[x["Outcome"] == className]  # tylko elementy klasy className
+            tmp = x[x["Outcome"] == className]
             for columnName in columnNames:
-                data = tmp.loc[:, columnName] #wyciągamy wszystkie wartosci z columnName z konkretnej klasy
+                data = tmp.loc[:, columnName]
                 mu = mean(data)
                 sigma = stdev(data)
-                #prawdopodobienstwo teraz
-                prob *= 1/(sigma * math.sqrt(np.pi*2)) * np.exp(-0.5*((sample[columnName]-mu)/sigma)**2)
-            prob *= len(tmp)/len(x) # prob = prob * (ilosc elementow danej klasy / ilosc wszystkich (poczatkowe prawdopod.))
-            probability.append([className, prob])
-    #znajdz maksymalne prawdopodobienstwo w tablicy probability i zwroc nazwe klasy
-        maxprobNameAndValue = max(probability, key = lambda x:x[1])
-        return maxprobNameAndValue
 
+                if columnName == "Glucose":
+                    prob *= 2 / (sigma * math.sqrt(np.pi * 2)) * np.exp(-0.5 * ((sample[columnName] - mu) / sigma) ** 2)
+                elif columnName == "BMI":
+                    prob *= 1.5 / (sigma * math.sqrt(np.pi * 2)) * np.exp(-0.5 * ((sample[columnName] - mu) / sigma) ** 2)
+                elif columnName == "Pregnancies":
+                    prob *= 0.8 / (sigma * math.sqrt(np.pi * 2)) * np.exp(-0.5 * ((sample[columnName] - mu) / sigma) ** 2)
+                elif columnName == "DiabetesPedigreeFunction":
+                    prob *= 1.5 / (sigma * math.sqrt(np.pi * 2)) * np.exp(-0.5 * ((sample[columnName] - mu) / sigma) ** 2)
+                else:
+                    prob *= 1 / (sigma * math.sqrt(np.pi * 2)) * np.exp(-0.5 * ((sample[columnName] - mu) / sigma) ** 2)
+
+            prob *= len(tmp) / len(x)
+            probability.append([className, prob])
+
+        maxprobNameAndValue = max(probability, key=lambda x: x[1])
+        return maxprobNameAndValue
 
 # wczytanie bazy
 
 diabetes = pd.read_csv("diabetes.csv")
 
-diabetes = DataProcessing.get_records_with_max_4_pregnancies(diabetes)
-diabetes = DataProcessing.remove_records_with_zeros(diabetes)
+print()
+print("Ogólne informacje dot. :")
+print()
 
-# diabetes.info()
-# print(diabetes.head())
+diabetes.info()
 
-DataProcessing.shuffle(diabetes)
-DataProcessing.normalization(diabetes)
-train, test = DataProcessing.split(diabetes, 0.7)
-tmp = NaiveBayes.classify(train, test.iloc[0])
-print(tmp)
+print()
+print("Opis bazy: (średnia,  odchylenie standardowe, min, max)")
+print()
 
-counter = 0
-for i in range(len(test)):
-    tmp = NaiveBayes.classify(train, test.iloc[i])[0]
-    if tmp == test.iloc[i]['Outcome']:
-        counter += 1
-dokladnosc = float(counter)/len(test) * 100
-print(dokladnosc, "%")
+print(diabetes.describe())
+
+print()
+print("Korelacja danych w bazie: ")
+print()
+
+print(diabetes.corr())
+
+
+# wizualizacja graficzna korelacji danych
+f, ax = plt.subplots(figsize = (10,10))
+sns.heatmap(diabetes.corr(), annot = True, linewidths = 0.5, linecolor = "black", fmt = ".4f", ax = ax)
+plt.show()
+
+#wizualuzacja graficzna danych w sposób punkowy
+# sns.pairplot(diabetes, hue = "Outcome", kind='reg')
+# plt.show()
+
+# rozmiar danych (rekordy x kolumny)
+print("Rozmiar bazy danych rekordy x kolumny")
+print(diabetes.shape)
+
+
+
+
+# diabetes = DataProcessing.get_records_with_max_6_pregnancies(diabetes)
+
+# DataProcessing.shuffle(diabetes)
+#
+# print("Nieznormalizowane")
+# train, test = DataProcessing.split(diabetes, 0.7)
+#
+# tmp = NaiveBayes.classify(train, test.iloc[0])
+# print(tmp)
+#
+# counter = 0
+# for i in range(len(test)):
+#     tmp = NaiveBayes.classify(train, test.iloc[i])[0]
+#     if tmp == test.iloc[i]['Outcome']:
+#         counter += 1
+# dokladnosc = float(counter)/len(test) * 100
+# print(dokladnosc, "%")
+#
+# print("Znormalizowane")
+#
+# DataProcessing.normalization(diabetes)
+# tmp = NaiveBayes.classify(train, test.iloc[0])
+# print(tmp)
+#
+# counter = 0
+# for i in range(len(test)):
+#     tmp = NaiveBayes.classify(train, test.iloc[i])[0]
+#     if tmp == test.iloc[i]['Outcome']:
+#         counter += 1
+# dokladnosc = float(counter)/len(test) * 100
+# print(dokladnosc, "%")
+#
