@@ -126,7 +126,42 @@ print(diabetes.shape)
 
 plt.figure()
 sns.countplot(data=diabetes, x='Outcome')
+
+# Ponieważ zauważyliśmy, że ilość ciąż ma znikomy wpływ na wynik,
+# sprawdzamy ile mamy kobiet z iloma ciazami
+
+print()
+print("Ilość ciąż pogrupowana według ilości kobiet: ")
+print()
+print(diabetes["Pregnancies"].value_counts())
+
+
+plt.figure(figsize=(10, 6))  # Adjust the figure size as needed
+sns.countplot(data=diabetes, x='Pregnancies')
+plt.xlabel('Number of Pregnancies')
+plt.ylabel('Number of Women')
+plt.title('Number of Women grouped by number of pregnancies')
+
 plt.show()
+
+# UWAGA ! Zaważamy, że powyżej 6 ciąż jest już dość mało kobiet
+# więc wyrzucamy te rekordy gdzie ilość ciąż jest >6
+# mamy funkcje get_records_with_max_6_pregnancies
+
+# 3. BADAMY WARTOŚCI KRAŃCOWE, I CZYŚCIMY Z NICH BAZE
+
+#tutaj mamy wykresy ,które nam pokazują odstające wartości
+for c in diabetes.columns:
+    plt.figure()
+    sns.boxplot(x = c, data = diabetes, orient = "v")
+    plt.show()
+
+# UWAGA! Zauważamy, że Insulina i DiabetesPedigreeFunction ma dużo
+# odstających wartości, więc czyścimy te kolumny z odstających wartości
+
+
+
+
 
 # diabetes = DataProcessing.get_records_with_max_6_pregnancies(diabetes)
 
