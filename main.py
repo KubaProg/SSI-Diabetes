@@ -1,7 +1,5 @@
 import math
 from statistics import stdev
-
-import numpy
 import numpy as np    # do odczytu z pliku
 import pandas as pd   # do analiz
 import random as rn   # do randomowych liczb
@@ -84,6 +82,8 @@ class NaiveBayes:
 
 diabetes = pd.read_csv("diabetes.csv")
 
+# 1. OPIS OGÓLNY DANYCH W BAZIE
+
 print()
 print("Ogólne informacje dot. :")
 print()
@@ -106,18 +106,27 @@ print(diabetes.corr())
 # wizualizacja graficzna korelacji danych
 f, ax = plt.subplots(figsize = (10,10))
 sns.heatmap(diabetes.corr(), annot = True, linewidths = 0.5, linecolor = "black", fmt = ".4f", ax = ax)
-plt.show()
+
 
 #wizualuzacja graficzna danych w sposób punkowy
 # sns.pairplot(diabetes, hue = "Outcome", kind='reg')
 # plt.show()
 
 # rozmiar danych (rekordy x kolumny)
+print()
 print("Rozmiar bazy danych rekordy x kolumny")
+print()
+
 print(diabetes.shape)
 
 
+# 2. ANALIZA DANYCH W BAZIE
 
+# Graficzne zestawienie wyników diagnoz dla całej bazy:
+
+plt.figure()
+sns.countplot(data=diabetes, x='Outcome')
+plt.show()
 
 # diabetes = DataProcessing.get_records_with_max_6_pregnancies(diabetes)
 
