@@ -125,6 +125,8 @@ print()
 print(diabetes.corr())
 
 
+
+
 # wizualizacja graficzna korelacji danych
 f, ax = plt.subplots(figsize = (10,10))
 sns.heatmap(diabetes.corr(), annot = True, linewidths = 0.5, linecolor = "black", fmt = ".4f", ax = ax)
@@ -171,6 +173,29 @@ plt.xlabel('Number of Pregnancies')
 plt.ylabel('Number of Women')
 plt.title('Number of Women grouped by number of pregnancies')
 
+
+print()
+print()
+print("Zauważyliśmy sporo zer w kolumnie 'Insulin', sprawdźmy to: ")
+print()
+print()
+
+zero_Insulin = 0
+zero_Outcome_Insulin = 0
+one_Outcome_Insulin = 0
+
+for i in range(len(diabetes["Insulin"])):
+    if (diabetes["Insulin"][i] == 0):
+        zero_Insulin += 1
+        if (diabetes["Outcome"][i] == 0):
+            zero_Outcome_Insulin += 1
+
+        if (diabetes["Outcome"][i] == 1):
+            one_Outcome_Insulin += 1
+
+print("Ilość 0 w kolumnie 'Insulin' dla wszystkich wyników ", zero_Insulin)
+print("Ilość 0 w kolumnie 'Insulin' dla braku cukrzycy: ", zero_Outcome_Insulin)
+print("Ilość 0 w kolumnie 'Insulin' dla zdiagnozowanej cukrzycy ", one_Outcome_Insulin)
 
 # 3. BADAMY WARTOŚCI KRAŃCOWE, I CZYŚCIMY Z NICH BAZE
 
@@ -232,7 +257,5 @@ for i in range(len(test)):
         counter += 1
 dokladnosc = float(counter)/len(test) * 100
 print(dokladnosc, "%")
-
-
 
 plt.show()
