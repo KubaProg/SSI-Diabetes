@@ -23,15 +23,11 @@ class DataProcessing:
         columnNames = values.columns.tolist()
         for column in columnNames:
             data = x[column]
-            non_zero_data = data[data != 0]
-            min1 = min(non_zero_data)
-            max1 = max(non_zero_data)
+            min1 = min(data)
+            max1 = max(data)
             if max1 - min1 == 0:
                 continue  # Skip normalization if the range is zero
-            for row, value in data.iteritems():
-                if value != 0:
-                    xprim = (value - min1) / (max1 - min1)
-                    x.at[row, column] = xprim
+            x[column] = (data - min1) / (max1 - min1)
 
     @staticmethod
     def split(x, percentage):
@@ -40,12 +36,32 @@ class DataProcessing:
         training = x.iloc[:split_index]
         testing = x.iloc[split_index:]
         return training, testing
-    @staticmethod
-    def get_records_with_max_6_pregnancies(diabetes):
-        max_pregnancies = 6
-        filtered_records = diabetes[diabetes['Pregnancies'] <= max_pregnancies]
 
-        return filtered_records
+    # Metoda do czyszczenia rekordow, które mają zbyt odstające wartości,
+    # iterujemy po wszystkich kolumnach i czyscimy metodą 'IQR'
+    # czyli Interquartile Range (IQR) method, pol. (rozstęp ćwiartkowy),
+    # czyli bierzemy różnice między trzecim a pierwszym kwartylem czyli obszar,
+    # w którym mieści się 50% obserwacji
+    def cleanColumn(data, columns, thr=2):
+        column_desc = data[columns].describe()
+
+        q3 = column_desc[6]
+        q1 = column_desc[4]
+        IQR = q3 - q1
+
+        top_limit_clm = q3 + thr * IQR
+        bottom_limit_clm = q1 - thr * IQR
+
+        filter_clm_bottom = bottom_limit_clm < data[columns]
+        filter_clm_top = data[columns] < top_limit_clm
+
+        filters = filter_clm_bottom & filter_clm_top
+
+        data = data[filters]
+
+        print("{} of dataset after column {}".format(data.shape, columns))
+
+        return data
 
 class NaiveBayes:
     @staticmethod
@@ -78,6 +94,7 @@ class NaiveBayes:
         maxprobNameAndValue = max(probability, key=lambda x: x[1])
         return maxprobNameAndValue
 
+
 # wczytanie bazy
 
 diabetes = pd.read_csv("diabetes.csv")
@@ -85,19 +102,24 @@ diabetes = pd.read_csv("diabetes.csv")
 # 1. OPIS OGÓLNY DANYCH W BAZIE
 
 print()
+print()
 print("Ogólne informacje dot. :")
+print()
 print()
 
 diabetes.info()
 
 print()
+print()
 print("Opis bazy: (średnia,  odchylenie standardowe, min, max)")
 print()
-
+print()
 print(diabetes.describe())
 
 print()
+print()
 print("Korelacja danych w bazie: ")
+print()
 print()
 
 print(diabetes.corr())
@@ -113,8 +135,13 @@ sns.heatmap(diabetes.corr(), annot = True, linewidths = 0.5, linecolor = "black"
 # plt.show()
 
 # rozmiar danych (rekordy x kolumny)
+
 print()
+print()
+
 print("Rozmiar bazy danych rekordy x kolumny")
+
+print()
 print()
 
 print(diabetes.shape)
@@ -131,7 +158,9 @@ sns.countplot(data=diabetes, x='Outcome')
 # sprawdzamy ile mamy kobiet z iloma ciazami
 
 print()
+print()
 print("Ilość ciąż pogrupowana według ilości kobiet: ")
+print()
 print()
 print(diabetes["Pregnancies"].value_counts())
 
@@ -142,11 +171,6 @@ plt.xlabel('Number of Pregnancies')
 plt.ylabel('Number of Women')
 plt.title('Number of Women grouped by number of pregnancies')
 
-plt.show()
-
-# UWAGA ! Zaważamy, że powyżej 6 ciąż jest już dość mało kobiet
-# więc wyrzucamy te rekordy gdzie ilość ciąż jest >6
-# mamy funkcje get_records_with_max_6_pregnancies
 
 # 3. BADAMY WARTOŚCI KRAŃCOWE, I CZYŚCIMY Z NICH BAZE
 
@@ -154,44 +178,61 @@ plt.show()
 for c in diabetes.columns:
     plt.figure()
     sns.boxplot(x = c, data = diabetes, orient = "v")
-    plt.show()
+
 
 # UWAGA! Zauważamy, że Insulina i DiabetesPedigreeFunction ma dużo
-# odstających wartości, więc czyścimy te kolumny z odstających wartości
+# odstających wartości, więc czyścimy kolumny z odstających wartości
+# implemeentujemy metode cleanColumn(data,columns), która czysci
+# wszystkie kolumny metodą IQR (Interquartile Range  method),
+# pol (metoda rozstępu ćwiartkowego)
+
+print()
+print()
+print("Metoda IQR do czyszczenia danych: PRZEBIEG KOLUMNA PO KOLUMNIE:")
+print()
+print()
+
+
+for i in diabetes.columns:
+    diabetes = DataProcessing.cleanColumn(diabetes,i)
+
+print()
+print()
+print("Nowy wymiar po czyszczeniu kolumn metodą IQR: ", diabetes.shape)
+print()
+print()
+
+
+DataProcessing.shuffle(diabetes)
+
+print("Nieznormalizowane")
+train, test = DataProcessing.split(diabetes, 0.7)
+
+tmp = NaiveBayes.classify(train, test.iloc[0])
+print(tmp)
+
+counter = 0
+for i in range(len(test)):
+    tmp = NaiveBayes.classify(train, test.iloc[i])[0]
+    if tmp == test.iloc[i]['Outcome']:
+        counter += 1
+dokladnosc = float(counter)/len(test) * 100
+print(dokladnosc, "%")
+
+print("Znormalizowane")
+
+DataProcessing.normalization(diabetes)
+tmp = NaiveBayes.classify(train, test.iloc[0])
+print(tmp)
+
+counter = 0
+for i in range(len(test)):
+    tmp = NaiveBayes.classify(train, test.iloc[i])[0]
+    if tmp == test.iloc[i]['Outcome']:
+        counter += 1
+dokladnosc = float(counter)/len(test) * 100
+print(dokladnosc, "%")
 
 
 
-
-
-# diabetes = DataProcessing.get_records_with_max_6_pregnancies(diabetes)
-
-# DataProcessing.shuffle(diabetes)
-#
-# print("Nieznormalizowane")
-# train, test = DataProcessing.split(diabetes, 0.7)
-#
-# tmp = NaiveBayes.classify(train, test.iloc[0])
-# print(tmp)
-#
-# counter = 0
-# for i in range(len(test)):
-#     tmp = NaiveBayes.classify(train, test.iloc[i])[0]
-#     if tmp == test.iloc[i]['Outcome']:
-#         counter += 1
-# dokladnosc = float(counter)/len(test) * 100
-# print(dokladnosc, "%")
-#
-# print("Znormalizowane")
-#
-# DataProcessing.normalization(diabetes)
-# tmp = NaiveBayes.classify(train, test.iloc[0])
-# print(tmp)
-#
-# counter = 0
-# for i in range(len(test)):
-#     tmp = NaiveBayes.classify(train, test.iloc[i])[0]
-#     if tmp == test.iloc[i]['Outcome']:
-#         counter += 1
-# dokladnosc = float(counter)/len(test) * 100
-# print(dokladnosc, "%")
-#
+plt.show()
